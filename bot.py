@@ -45,19 +45,15 @@ def esta_abierto_wall_street():
     return apertura <= ahora_ny <= cierre
 
 def obtener_datos_monitor():
-    # CAMBIO: Títulos modernizados a VISOR
     lineas = ["🔭 <b>VISOR</b>", "━━━━━━━━━━━━━━"]
-    
     abierto = esta_abierto_wall_street()
     estado_ws = "🟢 <b>ABIERTO</b>" if abierto else "🔴 <b>CERRADO</b>"
-    
     lineas.append(f"\n🇺🇸 <b>VISOR USA:</b> {estado_ws}")
     
     for seccion, activos in MARKETS.items():
         if seccion != "WALL_STREET":
             emoji = "🧱" if seccion == "COMMODITIES" else "🪙"
             lineas.append(f"\n{emoji} <b>{seccion}:</b> 🟢 <b>ABIERTO</b>")
-            
         for ticker, nombre in activos.items():
             try:
                 val = yf.Ticker(ticker).history(period="5d")
@@ -65,33 +61,22 @@ def obtener_datos_monitor():
                 precio = val['Close'].iloc[-1]
                 cambio = ((precio / val['Close'].iloc[-2]) - 1) * 100
                 color = "🟢" if cambio >= 0 else "🔴"
-                
-                if ticker == "^TNX":
-                    lineas.append(f"{color} <b>{nombre}:</b> <code>{precio:.2f}% ({cambio:+.2f}%)</code>")
-                else:
-                    lineas.append(f"{color} <b>{nombre}:</b> <code>{precio:,.2f} ({cambio:+.2f}%)</code>")
+                formato = f"{precio:.2f}%" if ticker == "^TNX" else f"{precio:,.2f}"
+                lineas.append(f"{color} <b>{nombre}:</b> <code>{formato} ({cambio:+.2f}%)</code>")
             except: continue
-            
     return "\n".join(lineas)
 
 def enviar_telegram(titulo, link, fuente):
     token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
-    
     if not link:
         mensaje = f"🔭 <b>{fuente}</b>\n━━━━━━━━━━━━━━\n{titulo}"
         disable_preview = True
     else:
         mensaje = f"🎯 <b>{fuente}</b>\n━━━━━━━━━━━━━━\n📝 {titulo}\n\n🔗 {link}"
         disable_preview = False 
-
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        'chat_id': chat_id,
-        'text': mensaje,
-        'parse_mode': 'HTML',
-        'disable_web_page_preview': disable_preview
-    }
+    payload = {'chat_id': chat_id, 'text': mensaje, 'parse_mode': 'HTML', 'disable_web_page_preview': disable_preview}
     requests.post(url, json=payload, timeout=25)
 
 def main():
@@ -100,39 +85,29 @@ def main():
     ahora_ar = datetime.now(tz_ar)
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
-    # 1. LÓGICA RAVA (Apertura)
+    # 1. LÓGICA RAVA
     archivo_rava = "ultimo_rava.txt"
-    if ahora_ar.weekday() < 5 and (ahora_ar.hour == 9 and ahora_ar.minute >= 45 or ahora_ar.hour > 9):
-        ultimo_envio = open(archivo_rava, "r").read().strip() if os.path.exists(archivo_rava) else ""
-        if ultimo_envio != fecha_hoy:
-            msg_rava = (
-                "🔔 <b>¡APERTURA DE MERCADO!</b>\n"
-                "━━━━━━━━━━━━━━\n"
-                "Inicia la jornada financiera. Sigan el análisis en vivo aquí:\n\n"
-                "📺 <b>Ver Transmisión:</b> https://www.youtube.com/@RavaBursatil/live"
-            )
-            url_tele = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendPhoto"
-            payload = {
-                'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
-                'photo': "https://www.rava.com/assets/img/logo-rava.png",
-                'caption': msg_rava,
-                'parse_mode': 'HTML'
-            }
-            try:
-                requests.post(url_tele, json=payload, timeout=20)
-            except:
-                enviar_telegram(msg_rava, None, "ALERTA RAVA")
+    ultimo_envio_rava = ""
+    if os.path.exists(archivo_rava):
+        with open(archivo_rava, "r") as f: ultimo_envio_rava = f.read().strip()
+
+    if ahora_ar.weekday() < 5 and (ahora_ar.hour >= 10 or (ahora_ar.hour == 9 and ahora_ar.minute >= 45)):
+        if ultimo_envio_rava != fecha_hoy:
+            msg_rava = "🔔 <b>¡APERTURA DE MERCADO!</b>\n━━━━━━━━━━━━━━\nInicia la jornada financiera.\n📺 <b>Ver Transmisión:</b> https://www.youtube.com/@RavaBursatil/live"
+            enviar_telegram(msg_rava, None, "ALERTA RAVA")
             with open(archivo_rava, "w") as f: f.write(fecha_hoy)
 
-    # 2. LÓGICA DEL VISOR (10hs a 19hs L-V)
+    # 2. LÓGICA DEL VISOR
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
         enviar_telegram(obtener_datos_monitor(), None, "VISOR")
 
-    # 3. LÓGICA DE FEEDS BLUESKY (Con Filtros y Memoria)
+    # 3. LÓGICA DE FEEDS BLUESKY
     archivo_h = "last_id_inicio.txt"
-    if not os.path.exists(archivo_h): open(archivo_h, "w").close()
-    with open(archivo_h, "r") as f: historial = set(f.read().splitlines())
+    historial = set()
+    if os.path.exists(archivo_h):
+        with open(archivo_h, "r") as f: historial = set(f.read().splitlines())
 
+    nuevos_links = []
     for nombre, url in FEEDS.items():
         try:
             feed = feedparser.parse(requests.get(url, timeout=30).content)
@@ -142,21 +117,23 @@ def main():
                     desc = entrada.get('description', entrada.get('title', ''))
                     texto_limpio = re.sub(r'<[^>]+>', '', desc)
                     
-                    # FILTRO PARA AMBITO_DOLAR
                     if nombre == "AMBITO_DOLAR":
                         if "APERTURA" in texto_limpio.upper() or "CIERRE" in texto_limpio.upper():
                             enviar_telegram(texto_limpio[:450], link, nombre)
-                        # IMPORTANTE: Guardamos el ID aunque no pase el filtro para no volver a leerlo
-                        with open(archivo_h, "a") as f: f.write(link + "\n")
-                        historial.add(link)
-                        continue
+                    else:
+                        enviar_telegram(texto_limpio[:450], link, nombre)
                     
-                    # Otros feeds (Trendspider/Barchart)
-                    enviar_telegram(texto_limpio[:450], link, nombre)
-                    with open(archivo_h, "a") as f: f.write(link + "\n")
                     historial.add(link)
-                    time.sleep(2)
+                    nuevos_links.append(link)
+                    time.sleep(1)
         except: continue
-            
+    
+    # GUARDADO FINAL DE SEGURIDAD (Esto asegura que el archivo se actualice)
+    if nuevos_links:
+        with open(archivo_h, "a") as f:
+            for l in nuevos_links:
+                f.write(l + "\n")
+        print(f"✅ Memoria actualizada con {len(nuevos_links)} nuevos links.")
+
 if __name__ == "__main__":
     main()
