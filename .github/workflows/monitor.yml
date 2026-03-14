@@ -2,8 +2,8 @@ name: Monitor Financiero VISOR
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Corre cada 30 minutos
-  workflow_dispatch:        # El botón mágico para probarlo ahora
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout del código
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true  # Permite al bot escribir en el repo
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -25,3 +27,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot.py
+
+      - name: Guardar Memoria (Git Push)
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add last_id_inicio.txt ultimo_rava.txt
+          git commit -m "Actualizar historial [skip ci]" || echo "No hay cambios para guardar"
+          git push
