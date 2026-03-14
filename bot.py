@@ -45,20 +45,20 @@ def esta_abierto_wall_street():
     return apertura <= ahora_ny <= cierre
 
 def obtener_datos_monitor():
-    # CAMBIO REALIZADO AQUÍ: De MONITOR a VISOR
+    # CAMBIO: Títulos modernizados a VISOR
     lineas = ["🔭 <b>VISOR</b>", "━━━━━━━━━━━━━━"]
     
     abierto = esta_abierto_wall_street()
     estado_ws = "🟢 <b>ABIERTO</b>" if abierto else "🔴 <b>CERRADO</b>"
     
-    # CAMBIO REALIZADO AQUÍ: De MONITOR DE MERCADOS a VISOR USA
     lineas.append(f"\n🇺🇸 <b>VISOR USA:</b> {estado_ws}")
     
-    for seccion in ["WALL_STREET", "COMMODITIES", "CRYPTOS"]:
+    for seccion, activos in MARKETS.items():
         if seccion != "WALL_STREET":
-            lineas.append(f"\n{ '🧱' if seccion == 'COMMODITIES' else '🪙' } <b>{seccion}:</b> 🟢 <b>ABIERTO</b>")
-        
-        for ticker, nombre in MARKETS[seccion].items():
+            emoji = "🧱" if seccion == "COMMODITIES" else "🪙"
+            lineas.append(f"\n{emoji} <b>{seccion}:</b> 🟢 <b>ABIERTO</b>")
+            
+        for ticker, nombre in activos.items():
             try:
                 val = yf.Ticker(ticker).history(period="5d")
                 if len(val) < 2: continue
@@ -66,8 +66,10 @@ def obtener_datos_monitor():
                 cambio = ((precio / val['Close'].iloc[-2]) - 1) * 100
                 color = "🟢" if cambio >= 0 else "🔴"
                 
-                formato = f"{precio:.2f}%" if ticker == "^TNX" else f"{precio:,.2f}"
-                lineas.append(f"{color} <b>{nombre}:</b> <code>{formato} ({cambio:+.2f}%)</code>")
+                if ticker == "^TNX":
+                    lineas.append(f"{color} <b>{nombre}:</b> <code>{precio:.2f}% ({cambio:+.2f}%)</code>")
+                else:
+                    lineas.append(f"{color} <b>{nombre}:</b> <code>{precio:,.2f} ({cambio:+.2f}%)</code>")
             except: continue
             
     return "\n".join(lineas)
@@ -77,7 +79,6 @@ def enviar_telegram(titulo, link, fuente):
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
     
     if not link:
-        # CAMBIO AQUÍ: fuente pasará a ser "VISOR" en la llamada
         mensaje = f"🔭 <b>{fuente}</b>\n━━━━━━━━━━━━━━\n{titulo}"
         disable_preview = True
     else:
@@ -94,24 +95,40 @@ def enviar_telegram(titulo, link, fuente):
     requests.post(url, json=payload, timeout=25)
 
 def main():
+    print("🚀 Ejecutando Visor...")
     tz_ar = pytz.timezone('America/Argentina/Buenos_Aires')
     ahora_ar = datetime.now(tz_ar)
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
-    # 1. Lógica Rava
+    # 1. LÓGICA RAVA (Apertura)
     archivo_rava = "ultimo_rava.txt"
-    if ahora_ar.weekday() < 5 and (ahora_ar.hour >= 10):
+    if ahora_ar.weekday() < 5 and (ahora_ar.hour == 9 and ahora_ar.minute >= 45 or ahora_ar.hour > 9):
         ultimo_envio = open(archivo_rava, "r").read().strip() if os.path.exists(archivo_rava) else ""
         if ultimo_envio != fecha_hoy:
-            msg = "🔔 <b>¡APERTURA DE MERCADO!</b>\n━━━━━━━━━━━━━━\nInicia la jornada financiera.\n📺 https://www.youtube.com/@RavaBursatil/live"
-            enviar_telegram(msg, None, "ALERTA")
+            msg_rava = (
+                "🔔 <b>¡APERTURA DE MERCADO!</b>\n"
+                "━━━━━━━━━━━━━━\n"
+                "Inicia la jornada financiera. Sigan el análisis en vivo aquí:\n\n"
+                "📺 <b>Ver Transmisión:</b> https://www.youtube.com/@RavaBursatil/live"
+            )
+            url_tele = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendPhoto"
+            payload = {
+                'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
+                'photo': "https://www.rava.com/assets/img/logo-rava.png",
+                'caption': msg_rava,
+                'parse_mode': 'HTML'
+            }
+            try:
+                requests.post(url_tele, json=payload, timeout=20)
+            except:
+                enviar_telegram(msg_rava, None, "ALERTA RAVA")
             with open(archivo_rava, "w") as f: f.write(fecha_hoy)
 
-    # 2. Lógica del Monitor (Ahora llamado VISOR)
+    # 2. LÓGICA DEL VISOR (10hs a 19hs L-V)
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
         enviar_telegram(obtener_datos_monitor(), None, "VISOR")
 
-    # 3. Lógica Feeds BlueSky
+    # 3. LÓGICA DE FEEDS BLUESKY (Con Filtros)
     archivo_h = "last_id_inicio.txt"
     if not os.path.exists(archivo_h): open(archivo_h, "w").close()
     with open(archivo_h, "r") as f: historial = set(f.read().splitlines())
@@ -122,8 +139,15 @@ def main():
             for entrada in reversed(feed.entries[:5]):
                 link = entrada.get('link')
                 if link and link not in historial:
-                    desc = re.sub(r'<[^>]+>', '', entrada.get('description', ''))
-                    enviar_telegram(desc[:450], link, nombre)
+                    desc = entrada.get('description', entrada.get('title', ''))
+                    texto_limpio = re.sub(r'<[^>]+>', '', desc)
+                    
+                    # FILTRO ESTRICTO PARA AMBITO_DOLAR
+                    if nombre == "AMBITO_DOLAR":
+                        if "APERTURA" not in texto_limpio.upper() and "CIERRE" not in texto_limpio.upper():
+                            continue
+                    
+                    enviar_telegram(texto_limpio[:450], link, nombre)
                     with open(archivo_h, "a") as f: f.write(link + "\n")
                     historial.add(link)
                     time.sleep(2)
