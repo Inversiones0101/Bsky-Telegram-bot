@@ -9,12 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # ESTO ES VITAL: Da permiso de escritura al script
+      contents: write
     steps:
       - name: Checkout del código
         uses: actions/checkout@v3
         with:
           persist-credentials: true
+          fetch-depth: 0  # Trae todo el historial para evitar conflictos
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -34,6 +35,15 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Forzamos la creación si no existen para que git no de error
+          touch last_id_inicio.txt ultimo_rava.txt
+          
           git add last_id_inicio.txt ultimo_rava.txt
-          # Solo hace commit si hay cambios reales
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Actualizar historial [skip ci]" && git push)
+          
+          # Forzamos el commit con -a y un mensaje claro
+          git commit -a -m "Actualizar historial [skip ci]" || echo "No hay cambios reales"
+          
+          # Intentamos el push con un pull previo por si acaso
+          git pull --rebase origin main
+          git push origin main
