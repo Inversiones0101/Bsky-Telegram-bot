@@ -128,7 +128,7 @@ def main():
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
         enviar_telegram(obtener_datos_monitor(), None, "VISOR")
 
-    # 3. LÓGICA DE FEEDS BLUESKY (Con Filtros)
+    # 3. LÓGICA DE FEEDS BLUESKY (Con Filtros y Memoria)
     archivo_h = "last_id_inicio.txt"
     if not os.path.exists(archivo_h): open(archivo_h, "w").close()
     with open(archivo_h, "r") as f: historial = set(f.read().splitlines())
@@ -142,11 +142,16 @@ def main():
                     desc = entrada.get('description', entrada.get('title', ''))
                     texto_limpio = re.sub(r'<[^>]+>', '', desc)
                     
-                    # FILTRO ESTRICTO PARA AMBITO_DOLAR
+                    # FILTRO PARA AMBITO_DOLAR
                     if nombre == "AMBITO_DOLAR":
-                        if "APERTURA" not in texto_limpio.upper() and "CIERRE" not in texto_limpio.upper():
-                            continue
+                        if "APERTURA" in texto_limpio.upper() or "CIERRE" in texto_limpio.upper():
+                            enviar_telegram(texto_limpio[:450], link, nombre)
+                        # IMPORTANTE: Guardamos el ID aunque no pase el filtro para no volver a leerlo
+                        with open(archivo_h, "a") as f: f.write(link + "\n")
+                        historial.add(link)
+                        continue
                     
+                    # Otros feeds (Trendspider/Barchart)
                     enviar_telegram(texto_limpio[:450], link, nombre)
                     with open(archivo_h, "a") as f: f.write(link + "\n")
                     historial.add(link)
