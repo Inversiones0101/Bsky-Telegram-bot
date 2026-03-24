@@ -103,8 +103,7 @@ def main():
             msg_maxi = (
                 "🔔 <b>¡PRÓXIMAMENTE: MAXI MEDIODÍA!</b>\n"
                 "━━━━━━━━━━━━━━\n"
-                "En minutos comienza el análisis de Maxi Montenegro y equipo.\n\n"
-                "📺 <b>Ver Programa en Vivo:</b> https://www.youtube.com/watch?v=3z2vU2_MddQ"
+                "📺 <b>Ver Programa en Vivo:</b> https://www.youtube.com/@Ahora_Play/streams"
             )
             enviar_telegram(msg_maxi, None, "ALERTA MMD")
             
@@ -115,7 +114,7 @@ def main():
 
     # 2. LÓGICA DEL VISOR
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
-        enviar_telegram(obtener_datos_monitor(), None, "VISOR")
+        enviar_telegram(obtener_datos_monitor(), None, "Fuente: yfinance")
 
     # 3. LÓGICA DE FEEDS BLUESKY
     archivo_h = "last_id_inicio.txt"
