@@ -85,17 +85,24 @@ def main():
     ahora_ar = datetime.now(tz_ar)
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
-    # 1. LÓGICA RAVA
-    archivo_rava = "ultimo_rava.txt"
-    ultimo_envio_rava = ""
-    if os.path.exists(archivo_rava):
-        with open(archivo_rava, "r") as f: ultimo_envio_rava = f.read().strip()
+    
+    # 1. LÓGICA MAXI MEDIODÍA (Reemplaza a Rava)
+    archivo_envio = "ultimo_maxi.txt"
+    ultimo_envio = ""
+    if os.path.exists(archivo_envio):
+        with open(archivo_envio, "r") as f: ultimo_envio = f.read().strip()
 
-    if ahora_ar.weekday() < 5 and (ahora_ar.hour >= 10 or (ahora_ar.hour == 9 and ahora_ar.minute >= 45)):
-        if ultimo_envio_rava != fecha_hoy:
-            msg_rava = "🔔 <b>¡APERTURA DE MERCADO!</b>\n━━━━━━━━━━━━━━\nInicia la jornada financiera.\n📺 <b>Ver Transmisión:</b> https://www.youtube.com/@RavaBursatil/live"
-            enviar_telegram(msg_rava, None, "ALERTA RAVA")
-            with open(archivo_rava, "w") as f: f.write(fecha_hoy)
+    if ahora_ar.weekday() < 5 and (ahora_ar.hour >= 13):
+        if ultimo_envio != fecha_hoy:
+            msg_maxi = (
+                "🔔 <b>¡INICIA MAXI MEDIODÍA!</b>\n"
+                "━━━━━━━━━━━━━━\n"
+                "Análisis con Maxi Montenegro, Martín Genero, Amílcar Collante y Juan Pablo Marino.\n\n"
+                "📺 <b>Ver en Vivo:</b> https://www.youtube.com/@Ahora_Play/live"
+            )
+            enviar_telegram(msg_maxi, None, "ALERTA EN VIVO")
+            with open(archivo_envio, "w") as f: f.write(fecha_hoy)
+
 
     # 2. LÓGICA DEL VISOR
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
