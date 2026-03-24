@@ -36,12 +36,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Forzamos la creación si no existen para que git no de error
-          touch last_id_inicio.txt ultimo_rava.txt
+          # IMPORTANTE: Agregamos el nuevo archivo de Maxi y mantenemos el de inicio
+          touch last_id_inicio.txt ultimo_maxi.txt
           
-          git add last_id_inicio.txt ultimo_rava.txt
+          git add last_id_inicio.txt ultimo_maxi.txt
           
-          # Forzamos el commit con -a y un mensaje claro
           git commit -a -m "Actualizar historial [skip ci]" || echo "No hay cambios reales"
           
           # Intentamos el push con un pull previo por si acaso
