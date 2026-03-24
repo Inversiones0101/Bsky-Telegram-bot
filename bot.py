@@ -11,7 +11,10 @@ import pytz
 FEEDS = {
     "AMBITO_DOLAR": "https://bsky.app/profile/ambitodolar.bsky.social/rss",
     "TRENDSPIDER_BSKY": "https://bsky.app/profile/trendspider.com/rss",
-    "BARCHART_BSKY": "https://bsky.app/profile/barchart.com/rss"
+    "BARCHART_BSKY": "https://bsky.app/profile/barchart.com/rss",
+    "QUANTHUSTLE": "https://bsky.app/profile/quanthustle.bsky.social/rss",
+    "EARNINGS_FORESIGHT": "https://bsky.app/profile/earningsforesight.bsky.social/rss",
+    "CL_CODING": "https://bsky.app/profile/clcoding.bsky.social/rss"
 }
 
 # --- CONFIGURACIÓN DE ACTIVOS ---
@@ -86,22 +89,28 @@ def main():
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
     
-    # 1. LÓGICA MAXI MEDIODÍA (Reemplaza a Rava)
+    # 1. LÓGICA YUOTUBE
     archivo_envio = "ultimo_maxi.txt"
     ultimo_envio = ""
     if os.path.exists(archivo_envio):
         with open(archivo_envio, "r") as f: ultimo_envio = f.read().strip()
 
-    if ahora_ar.weekday() < 5 and (ahora_ar.hour >= 13):
+    # CAMBIO 1: Rango horario de 12:00 a 12:59 (hora Argentina)
+    # Así el mensaje llega PREVIO al inicio de las 13:00hs
+    if ahora_ar.weekday() < 5 and ahora_ar.hour == 12:
         if ultimo_envio != fecha_hoy:
+            # CAMBIO 2: Enlace directo a la transmisión de hoy
             msg_maxi = (
-                "🔔 <b>¡INICIA MAXI MEDIODÍA!</b>\n"
+                "🔔 <b>¡PRÓXIMAMENTE: MAXI MEDIODÍA!</b>\n"
                 "━━━━━━━━━━━━━━\n"
-                "Análisis con Maxi Montenegro, Martín Genero, Amílcar Collante y Juan Pablo Marino.\n\n"
-                "📺 <b>Ver en Vivo:</b> https://www.youtube.com/@Ahora_Play/live"
+                "En minutos comienza el análisis de Maxi Montenegro y equipo.\n\n"
+                "📺 <b>Ver Programa en Vivo:</b> https://www.youtube.com/watch?v=3z2vU2_MddQ"
             )
-            enviar_telegram(msg_maxi, None, "ALERTA EN VIVO")
+            enviar_telegram(msg_maxi, None, "ALERTA MMD")
+            
+            # CAMBIO 3: Guardado inmediato para BLOQUEAR repeticiones
             with open(archivo_envio, "w") as f: f.write(fecha_hoy)
+            print(f"✅ Alerta MMD programada enviada para {fecha_hoy}")
 
 
     # 2. LÓGICA DEL VISOR
