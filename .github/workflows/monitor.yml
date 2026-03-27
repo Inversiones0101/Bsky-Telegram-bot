@@ -12,15 +12,16 @@ jobs:
       contents: write
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # ← Actualizado a v4
         with:
           persist-credentials: true
-          fetch-depth: 0
+          fetch-depth: 1  # ← Cambiado a 1 (más rápido)
 
       - name: Configurar Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # ← Actualizado a v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'  # ← Cambiado a 3.11 (más estable)
+          cache: 'pip'  # ← Agregado cache para velocidad
 
       - name: Instalar librerías
         run: |
@@ -40,5 +41,5 @@ jobs:
           touch last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
           
           git add last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
-          git commit -a -m "Actualizar historial [skip ci]" || echo "Sin cambios"
+          git commit -m "Actualizar historial [skip ci]" || echo "Sin cambios"
           git push origin main
