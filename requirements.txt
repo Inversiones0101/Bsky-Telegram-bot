@@ -1,4 +1,5 @@
-feedparser
 requests
+feedparser
 yfinance
 pytz
+deep-translator==1.11.4
