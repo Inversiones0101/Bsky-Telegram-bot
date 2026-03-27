@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Bsky-Telegram Bot - VISOR FINANCIERO MEJORADO v2.0
-Con traducción, imágenes de Bluesky, Spotify y alertas visuales
+Bsky-Telegram Bot - VISOR FINANCIERO v2.1
+Corregido: Filtro Ambito Dolar, visor alineado, alerta MMD renombrada
 """
 import os
 import sys
@@ -13,13 +13,12 @@ import yfinance as yf
 from datetime import datetime
 import pytz
 
-# Traductor - instalar: pip install deep-translator
 try:
     from deep_translator import GoogleTranslator
     TRADUCTOR_DISPONIBLE = True
 except ImportError:
     TRADUCTOR_DISPONIBLE = False
-    print("⚠️ deep-translator no instalado. Traducción desactivada.")
+    print("⚠️ deep-translator no instalado")
 
 # ============= CONFIGURACIÓN =============
 
@@ -31,20 +30,20 @@ FEEDS_BSKY = {
     "CL_CODING": "https://bsky.app/profile/clcoding.bsky.social/rss"
 }
 
-# Feeds especiales (sin traducción, con filtros específicos)
+# AMBITO DOLAR - Filtro específico para "Apertura de jornada" y "Cierre de jornada"
 FEEDS_ESPECIALES = {
     "AMBITO_DOLAR": {
         "url": "https://bsky.app/profile/ambitodolar.bsky.social/rss",
-        "filtros": ["APERTURA", "CIERRE", "DOLAR", "BLUE", "MEP", "CCL"]
+        "filtros_exactos": ["Apertura de jornada", "Cierre de jornada"],  # ← Filtros exactos
+        "emoji": "💵"
     }
 }
 
-# NUEVO: Feed de Spotify
 FEEDS_SPOTIFY = {
     "BLOOMBERG_LINEA": {
         "nombre": "🎧 Bloomberg Línea Argentina",
-        "url_rss": "https://anchor.fm/s/6d5f6e48/podcast/rss",  # RSS del podcast
-        "url_base": "https://open.spotify.com/show/6d5f6e48",  # URL base del show
+        "url_rss": "https://anchor.fm/s/6d5f6e48/podcast/rss",
+        "url_base": "https://open.spotify.com/show/6d5f6e48",
         "emoji": "🎙️"
     }
 }
@@ -73,18 +72,15 @@ MARKETS = {
 # ============= UTILIDADES =============
 
 def traducir_texto(texto, destino='es'):
-    """Traduce texto al español usando Google Translator"""
     if not TRADUCTOR_DISPONIBLE or not texto:
         return texto
-    
     try:
-        # Limitar texto para no sobrecargar la API
         texto_truncado = texto[:4000]
         traductor = GoogleTranslator(source='auto', target=destino)
         return traductor.translate(texto_truncado)
     except Exception as e:
         print(f"⚠️ Error traduciendo: {e}")
-        return texto  # Fallback: texto original
+        return texto
 
 def esta_abierto_wall_street():
     tz_ny = pytz.timezone('America/New_York')
@@ -104,6 +100,10 @@ def formatear_cambio(cambio):
         return f"⚪ 0.00%"
 
 def obtener_datos_monitor():
+    """
+    Visor de mercados con indicadores alineados verticalmente
+    Formato: [EMOJI] [INDICADOR] [NOMBRE] [PRECIO ALINEADO] [VARIACIÓN]
+    """
     lineas = [
         "📊 <b>VISOR DE MERCADOS</b>",
         "━━━━━━━━━━━━━━━━━━━━━━━",
@@ -131,15 +131,22 @@ def obtener_datos_monitor():
                 precio_ant = data['Close'].iloc[-2]
                 cambio = ((precio / precio_ant) - 1) * 100
                 
+                # Formato especial para Tasa 10Y
                 if ticker == "^TNX":
-                    valor_str = f"{precio:.2f}%"
+                    precio_str = f"{precio:.2f}%"
                 else:
-                    valor_str = f"{precio:,.2f}"
+                    precio_str = f"{precio:,.2f}"
                 
-                cambio_str = formatear_cambio(cambio)
-                lineas.append(f"{emoji} <code>{nombre:<12}</code> <b>{valor_str:>10}</b>  {cambio_str}")
+                # NUEVO: Indicador alineado al inicio, precio alineado a la derecha
+                indicador = "🟢" if cambio >= 0 else "🔴"
+                cambio_str = f"{cambio:+.2f}%"
                 
-            except:
+                # Formato alineado: Emoji Indicador | Nombre | Precio | Variación
+                linea = f"{emoji} {indicador} <code>{nombre:<12}</code> <b>{precio_str:>10}</b>  <code>{cambio_str:>8}</code>"
+                lineas.append(linea)
+                
+            except Exception as e:
+                print(f"⚠️ Error en {ticker}: {e}")
                 continue
     
     lineas.append("\n━━━━━━━━━━━━━━━━━━━━━━━")
@@ -148,7 +155,7 @@ def obtener_datos_monitor():
     
     return "\n".join(lineas)
 
-# ============= TELEGRAM MEJORADO =============
+# ============= TELEGRAM =============
 
 class TelegramBot:
     def __init__(self):
@@ -159,7 +166,6 @@ class TelegramBot:
             raise ValueError("Faltan credenciales de Telegram")
 
     def enviar_texto(self, texto, disable_preview=True):
-        """Envía mensaje de texto simple"""
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         
         payload = {
@@ -177,22 +183,13 @@ class TelegramBot:
             return False
 
     def enviar_foto_con_caption(self, foto_url, caption, link_bsky=None):
-        """
-        Envía foto con caption traducido.
-        Si hay link de Bluesky, lo agrega al caption.
-        """
         url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
         
-        # Preparar caption
         header = "📊 <b>Bluesky Feed</b>\n━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        footer = ""
-        
-        if link_bsky:
-            footer = f"\n\n🔗 <a href='{link_bsky}'>Ver en Bluesky</a>"
+        footer = f"\n\n🔗 <a href='{link_bsky}'>Ver en Bluesky</a>" if link_bsky else ""
         
         caption_completo = f"{header}{caption}{footer}"
         
-        # Telegram limita caption a 1024 caracteres
         if len(caption_completo) > 1024:
             caption_completo = caption_completo[:1021] + "..."
         
@@ -205,37 +202,32 @@ class TelegramBot:
         
         try:
             resp = requests.post(url, json=payload, timeout=30)
-            
-            # Si falla por URL de foto inválida, enviar como texto
             if resp.status_code != 200:
                 error_desc = resp.json().get('description', '')
-                if "wrong file" in error_desc.lower() or "failed to get" in error_desc.lower():
-                    print(f"⚠️ Foto inválida, enviando como texto")
+                if "wrong" in error_desc.lower() or "failed" in error_desc.lower():
                     return self.enviar_texto(caption_completo, disable_preview=False)
                 return False
-            
             return True
-            
         except Exception as e:
             print(f"❌ Error enviando foto: {e}")
             return False
 
     def enviar_alerta_mmd(self, link_stream, imagen_url=None):
         """
-        Alerta de Maxi Mediodía con imagen y link directo al stream
+        Alerta renombrada: AHORAPLAY! en lugar de MAXI MEDIODÍA
         """
         url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
         
+        # NUEVO: Texto renombrado según solicitud
         caption = (
-            "🔔 <b>¡MAXI MEDIODÍA EN BREVE!</b>\n"
+            "🔔 <b>¡AHORAPLAY!</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📺 <b>Transmisión en vivo:</b> 13:00 - 15:00 (AR)\n\n"
+            "📺 Transmisión en vivo MaxiMedioDia de: 13:00 - 15:00 (AR)\n\n"
             f"▶️ <a href='{link_stream}'>CLICK PARA VER AHORA</a>"
         )
         
-        # Imagen por defecto si no se provee una
         if not imagen_url:
-            imagen_url = "https://img.youtube.com/vi/placeholder/maxresdefault.jpg"
+            imagen_url = "https://img.youtube.com/vi/live/maxresdefault.jpg"
         
         payload = {
             'chat_id': self.chat_id,
@@ -247,15 +239,12 @@ class TelegramBot:
         try:
             resp = requests.post(url, json=payload, timeout=25)
             if resp.status_code != 200:
-                # Fallback a texto si la imagen falla
                 return self.enviar_texto(caption, disable_preview=False)
             return True
         except Exception as e:
-            print(f"❌ Error alerta MMD: {e}")
             return self.enviar_texto(caption, disable_preview=False)
 
     def enviar_spotify(self, titulo, link_spotify, imagen_url=None, descripcion=""):
-        """Envía episodio de Spotify con imagen y link"""
         url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
         
         caption = (
@@ -269,7 +258,6 @@ class TelegramBot:
         if len(caption) > 1024:
             caption = caption[:1021] + "..."
         
-        # Imagen por defecto de Spotify si no hay una
         if not imagen_url:
             imagen_url = "https://storage.googleapis.com/spotifynewsroom/spotify-logo.png"
         
@@ -286,7 +274,6 @@ class TelegramBot:
                 return self.enviar_texto(caption, disable_preview=False)
             return True
         except Exception as e:
-            print(f"❌ Error Spotify: {e}")
             return self.enviar_texto(caption, disable_preview=False)
 
 # ============= GESTORES =============
@@ -315,8 +302,6 @@ class GestorHistorial:
 # ============= EXTRACTORES =============
 
 def extraer_imagen_de_bsky(html_content):
-    """Extrae URL de imagen del HTML de Bluesky"""
-    # Patrones comunes de imágenes en Bluesky
     patrones = [
         r'<img[^>]+src="([^"]+)"[^>]*class="[^"]*bsky-image[^"]*"',
         r'background-image:\s*url\(([^)]+)\)',
@@ -330,47 +315,33 @@ def extraer_imagen_de_bsky(html_content):
             url = match.group(1).replace('&amp;', '&')
             if url.startswith('http'):
                 return url
-    
     return None
 
 def obtener_link_stream_youtube():
-    """
-    Obtiene el link DIRECTO al stream en vivo de @Ahora_Play
-    Si no hay stream activo, devuelve el link del canal
-    """
-    try:
-        # Intentar obtener stream activo via RSS de YouTube
-        url_canal = "https://www.youtube.com/@Ahora_Play/streams"
-        
-        # Por ahora, devolvemos el link del canal (se puede mejorar con scraping)
-        return "https://www.youtube.com/@Ahora_Play/streams"
-        
-    except:
-        return "https://www.youtube.com/@Ahora_Play/streams"
+    return "https://www.youtube.com/@Ahora_Play/streams"
 
 # ============= MAIN =============
 
 def main():
-    print(f"🚀 Iniciando VISOR v2.0 - {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🚀 Iniciando VISOR v2.1 - {datetime.now().strftime('%H:%M:%S')}")
     
     bot = TelegramBot()
     tz_ar = pytz.timezone('America/Argentina/Buenos_Aires')
     ahora_ar = datetime.now(tz_ar)
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
-    # 1. ALERTA MAXI MEDIODÍA (12:00-12:59 AR)
+    # 1. ALERTA AHORAPLAY! (antes MMD)
     gestor_maxi = GestorHistorial("ultimo_maxi.txt")
     
     if ahora_ar.weekday() < 5 and ahora_ar.hour == 12:
         if not gestor_maxi.existe(fecha_hoy):
             link_stream = obtener_link_stream_youtube()
-            # Imagen de preview del programa (puedes cambiarla)
             imagen_mmd = "https://img.youtube.com/vi/live/maxresdefault.jpg"
             
             if bot.enviar_alerta_mmd(link_stream, imagen_mmd):
                 gestor_maxi.agregar(fecha_hoy)
                 gestor_maxi.guardar()
-                print(f"✅ Alerta MMD enviada: {fecha_hoy}")
+                print(f"✅ Alerta AHORAPLAY enviada: {fecha_hoy}")
     
     # 2. VISOR DE MERCADOS (10:00-19:00 AR)
     if ahora_ar.weekday() < 5 and 10 <= ahora_ar.hour <= 19:
@@ -378,7 +349,7 @@ def main():
         if bot.enviar_texto(datos, disable_preview=True):
             print("✅ Visor de mercados enviado")
     
-    # 3. FEEDS BLUESKY CON TRADUCCIÓN E IMÁGENES
+    # 3. FEEDS BLUESKY CON TRADUCCIÓN
     gestor_bsky = GestorHistorial("last_id_bsky.txt")
     enviados_bsky = 0
     
@@ -387,27 +358,20 @@ def main():
             resp = requests.get(url_feed, timeout=30)
             feed = feedparser.parse(resp.content)
             
-            for entrada in feed.entries[:2]:  # Solo últimos 2
+            for entrada in feed.entries[:2]:
                 link = entrada.get('link', '').strip()
                 if not link or gestor_bsky.existe(link):
                     continue
                 
-                # Obtener contenido
                 titulo = entrada.get('title', '')
                 desc = entrada.get('description', '')
-                
-                # Limpiar HTML
                 texto_limpio = re.sub(r'<[^>]+>', '', desc) or titulo
-                
-                # TRADUCIR al español
                 texto_traducido = traducir_texto(texto_limpio)
                 
-                # Intentar obtener imagen del contenido HTML
                 imagen_url = None
                 if desc and '<img' in desc:
                     imagen_url = extraer_imagen_de_bsky(desc)
                 
-                # Si no hay imagen en descripción, intentar con el link
                 if not imagen_url:
                     try:
                         resp_html = requests.get(link, timeout=10)
@@ -415,11 +379,9 @@ def main():
                     except:
                         pass
                 
-                # Enviar con foto si existe, si no como texto
                 if imagen_url:
                     exito = bot.enviar_foto_con_caption(imagen_url, texto_traducido, link)
                 else:
-                    # Sin imagen: enviar como texto con link
                     emoji = "📊"
                     mensaje = (
                         f"{emoji} <b>{nombre_feed.replace('_', ' ')}</b>\n"
@@ -442,7 +404,7 @@ def main():
         gestor_bsky.guardar()
         print(f"✅ {enviados_bsky} posts de Bluesky procesados")
     
-    # 4. FEEDS ESPECIALES (sin traducción, con filtros)
+    # 4. AMBITO DOLAR - Filtro exacto para "Apertura de jornada" y "Cierre de jornada"
     gestor_especial = GestorHistorial("last_id_especial.txt")
     
     for nombre, config in FEEDS_ESPECIALES.items():
@@ -450,33 +412,48 @@ def main():
             resp = requests.get(config['url'], timeout=30)
             feed = feedparser.parse(resp.content)
             
-            for entrada in feed.entries[:3]:
+            for entrada in feed.entries[:5]:  # Revisar más porque filtramos
                 link = entrada.get('link', '').strip()
                 if not link or gestor_especial.existe(link):
                     continue
                 
-                texto = re.sub(r'<[^>]+>', '', entrada.get('description', ''))
+                # Obtener texto completo
+                titulo = entrada.get('title', '')
+                desc = entrada.get('description', '')
+                texto_completo = f"{titulo} {desc}"
+                texto_limpio = re.sub(r'<[^>]+>', '', texto_completo)
                 
-                # Filtro especial
-                if not any(f in texto.upper() for f in config['filtros']):
+                # NUEVO: Filtro exacto para "Apertura de jornada" o "Cierre de jornada"
+                # Buscar al inicio del texto (donde suele estar)
+                texto_inicio = texto_limpio[:100].lower()
+                
+                contiene_apertura = "apertura de jornada" in texto_inicio
+                contiene_cierre = "cierre de jornada" in texto_inicio
+                
+                if not (contiene_apertura or contiene_cierre):
+                    print(f"⏭️ Saltando: no es apertura/cierre ({texto_limpio[:30]}...)")
                     continue
                 
-                # Sin traducir (es español)
+                # Determinar qué tipo es para el mensaje
+                tipo = "APERTURA" if contiene_apertura else "CIERRE"
+                emoji = config.get('emoji', '💵')
+                
                 mensaje = (
-                    f"💵 <b>Ambito Dolar</b>\n"
+                    f"{emoji} <b>Ambito Dolar - {tipo}</b>\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"{texto[:400]}\n\n"
-                    f"🔗 <a href='{link}'>Ver en Bluesky</a>"
+                    f"{texto_limpio[:500]}\n\n"
+                    f"🔗 <a href='{link}'>Ver gráfico completo</a>"
                 )
                 
                 if bot.enviar_texto(mensaje, disable_preview=False):
                     gestor_especial.agregar(link)
+                    print(f"✅ Ambito {tipo} enviado")
                     time.sleep(1.5)
                     
         except Exception as e:
             print(f"⚠️ Error en {nombre}: {e}")
     
-    # 5. SPOTIFY BLOOMBERG
+    # 5. SPOTIFY
     gestor_spotify = GestorHistorial("last_id_spotify.txt")
     
     for nombre, config in FEEDS_SPOTIFY.items():
@@ -484,8 +461,7 @@ def main():
             resp = requests.get(config['url_rss'], timeout=30)
             feed = feedparser.parse(resp.content)
             
-            for entrada in feed.entries[:1]:  # Solo el más reciente
-                # ID único del episodio
+            for entrada in feed.entries[:1]:
                 ep_id = entrada.get('id', '') or entrada.get('link', '')
                 if not ep_id or gestor_spotify.existe(ep_id):
                     continue
@@ -494,19 +470,17 @@ def main():
                 link = entrada.get('link', config['url_base'])
                 descripcion = re.sub(r'<[^>]+>', '', entrada.get('description', ''))
                 
-                # Buscar imagen en el feed
                 imagen = None
                 if 'image' in entrada:
                     imagen = entrada['image'].get('href') if isinstance(entrada['image'], dict) else entrada['image']
                 elif 'itunes_image' in entrada:
                     imagen = entrada['itunes_image']
                 
-                # Construir link directo a Spotify si es posible
                 link_spotify = link if 'spotify.com' in link else config['url_base']
                 
                 if bot.enviar_spotify(titulo, link_spotify, imagen, descripcion):
                     gestor_spotify.agregar(ep_id)
-                    print(f"✅ Spotify enviado: {titulo[:50]}...")
+                    print(f"✅ Spotify: {titulo[:50]}...")
                     time.sleep(2)
                     
         except Exception as e:
