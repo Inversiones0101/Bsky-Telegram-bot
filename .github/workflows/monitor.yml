@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           persist-credentials: true
-          fetch-depth: 0  # Trae todo el historial para evitar conflictos
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -23,7 +23,8 @@ jobs:
           python-version: '3.9'
 
       - name: Instalar librerías
-        run: pip install -r requirements.txt
+        run: |
+          pip install requests feedparser yfinance pytz deep-translator==1.11.4
 
       - name: Ejecutar VISOR
         env:
@@ -31,18 +32,13 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot.py
 
-      - name: Guardar Memoria (Git Push)
+      - name: Guardar Memoria
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # IMPORTANTE: Agregamos el nuevo archivo de Maxi y mantenemos el de inicio
-          touch last_id_inicio.txt ultimo_maxi.txt
+          touch last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
           
-          git add last_id_inicio.txt ultimo_maxi.txt
-          
-          git commit -a -m "Actualizar historial [skip ci]" || echo "No hay cambios reales"
-          
-          # Intentamos el push con un pull previo por si acaso
-          git pull --rebase origin main
+          git add last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
+          git commit -a -m "Actualizar historial [skip ci]" || echo "Sin cambios"
           git push origin main
