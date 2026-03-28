@@ -486,37 +486,48 @@ def main():
         print(f"✅ {enviados_spotify} episodios de Spotify guardados en historial")
     
     # ============= DIAGNÓSTICO (borrar después de la prueba) =============
-    urls_a_probar = {
-        "Bloomberg Linea RSS XML": "https://www.bloomberglinea.com/arc/outboundfeeds/new-news-feed/?outputType=xml",
-        "Anchor RSS viejo": "https://anchor.fm/s/6d5f6e48/podcast/rss",
-    }
+    import json
 
-    for nombre_url, url_rss_test in urls_a_probar.items():
-        print(f"\n🔍 ===== DIAGNÓSTICO: {nombre_url} =====")
-        try:
-            resp_test = requests.get(url_rss_test, timeout=30, allow_redirects=True)
-            print(f"📡 Status HTTP : {resp_test.status_code}")
-            print(f"📡 URL final   : {resp_test.url}")
-            print(f"📡 Content-Type: {resp_test.headers.get('Content-Type', 'N/A')}")
+    print("\n🔍 ===== DIAGNÓSTICO: Buscando RSS via Apple Podcasts API =====")
+    try:
+        # Apple Podcasts guarda el feedUrl original del podcast
+        apple_api = "https://itunes.apple.com/lookup?id=1628871245&entity=podcast"
+        resp_apple = requests.get(apple_api, timeout=30)
+        print(f"📡 Status Apple API: {resp_apple.status_code}")
 
-            feed_test = feedparser.parse(resp_test.content)
-            print(f"📦 Entradas encontradas: {len(feed_test.entries)}")
+        data_apple = resp_apple.json()
+        resultados = data_apple.get('results', [])
+        print(f"📦 Resultados: {len(resultados)}")
 
-            if feed_test.entries:
-                e = feed_test.entries[0]
-                print(f"📌 Título    : {e.get('title', 'N/A')}")
-                print(f"🔗 Link      : {e.get('link', 'N/A')}")
-                print(f"🆔 ID        : {e.get('id', 'N/A')}")
-                print(f"🖼️  image     : {e.get('image', 'N/A')}")
-                print(f"🖼️  itunes_img: {e.get('itunes_image', 'N/A')}")
-                print(f"📝 Desc (100): {str(e.get('description', 'N/A'))[:100]}")
-                print(f"✅ Esta URL FUNCIONA — {len(feed_test.entries)} entradas")
-            else:
-                print("❌ Feed vacío — URL incorrecta o privada")
+        if resultados:
+            podcast_info = resultados[0]
+            feed_url = podcast_info.get('feedUrl', 'N/A')
+            print(f"📌 Nombre  : {podcast_info.get('collectionName', 'N/A')}")
+            print(f"🔗 feedUrl : {feed_url}")
+            print(f"🖼️  artwork : {podcast_info.get('artworkUrl600', 'N/A')}")
 
-        except Exception as e_diag:
-            print(f"❌ Error: {e_diag}")
-        print(f"🔍 ===== FIN {nombre_url} =====")
+            # Probar si ese feedUrl funciona
+            if feed_url != 'N/A':
+                print(f"\n🔍 Probando feedUrl encontrado...")
+                resp_feed = requests.get(feed_url, timeout=30, allow_redirects=True)
+                print(f"📡 Status feedUrl: {resp_feed.status_code}")
+                print(f"📡 URL final     : {resp_feed.url}")
+                feed_test = feedparser.parse(resp_feed.content)
+                print(f"📦 Episodios     : {len(feed_test.entries)}")
+                if feed_test.entries:
+                    e = feed_test.entries[0]
+                    print(f"📌 Último título : {e.get('title', 'N/A')}")
+                    print(f"🔗 Link          : {e.get('link', 'N/A')}")
+                    print(f"🆔 ID            : {e.get('id', 'N/A')}")
+                    print(f"✅ FEED FUNCIONANDO — usar esta URL en el código")
+                else:
+                    print("❌ feedUrl encontrado pero feed vacío")
+        else:
+            print("❌ Apple API no devolvió resultados")
+
+    except Exception as e_diag:
+        print(f"❌ Error en diagnóstico: {e_diag}")
+    print("🔍 ===== FIN DIAGNÓSTICO =====\n")
     # ============= FIN DIAGNÓSTICO =============
 
     print(f"🏁 Finalizado - {datetime.now().strftime('%H:%M:%S')}")
