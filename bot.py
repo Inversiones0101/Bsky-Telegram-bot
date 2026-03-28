@@ -27,7 +27,7 @@ FEEDS_BSKY = {
     "BARCHART_BSKY": "https://bsky.app/profile/barchart.com/rss",
     "QUANTHUSTLE": "https://bsky.app/profile/quanthustle.bsky.social/rss",
     "EARNINGS_FORESIGHT": "https://bsky.app/profile/earningsforesight.bsky.social/rss",
-    "CL_CODING": "https://bsky.app/profile/clcoding.bsky.social/rss"
+    "GITHUB_TRENDING": "https://bsky.app/profile/github-trending.bsky.social/rss"
 }
 
 # AMBITO DOLAR - Filtro específico para "Apertura de jornada" y "Cierre de jornada"
