@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Bsky-Telegram Bot - VISOR FINANCIERO v2.1
-Corregido: Filtro Ambito Dolar, visor alineado, alerta MMD renombrada
+Bsky-Telegram Bot - VISOR FINANCIERO v2.2
+Fix: gestor_especial.guardar() agregado en sección Ambito Dolar
 """
 import os
 import sys
@@ -34,7 +34,7 @@ FEEDS_BSKY = {
 FEEDS_ESPECIALES = {
     "AMBITO_DOLAR": {
         "url": "https://bsky.app/profile/ambitodolar.bsky.social/rss",
-        "filtros_exactos": ["Apertura de jornada", "Cierre de jornada"],  # ← Filtros exactos
+        "filtros_exactos": ["Apertura de jornada", "Cierre de jornada"],
         "emoji": "💵"
     }
 }
@@ -100,10 +100,6 @@ def formatear_cambio(cambio):
         return f"⚪ 0.00%"
 
 def obtener_datos_monitor():
-    """
-    Visor de mercados con indicadores alineados verticalmente
-    Formato: [EMOJI] [INDICADOR] [NOMBRE] [PRECIO ALINEADO] [VARIACIÓN]
-    """
     lineas = [
         "📊 <b>VISOR DE MERCADOS</b>",
         "━━━━━━━━━━━━━━━━━━━━━━━",
@@ -131,17 +127,14 @@ def obtener_datos_monitor():
                 precio_ant = data['Close'].iloc[-2]
                 cambio = ((precio / precio_ant) - 1) * 100
                 
-                # Formato especial para Tasa 10Y
                 if ticker == "^TNX":
                     precio_str = f"{precio:.2f}%"
                 else:
                     precio_str = f"{precio:,.2f}"
                 
-                # NUEVO: Indicador alineado al inicio, precio alineado a la derecha
                 indicador = "🟢" if cambio >= 0 else "🔴"
                 cambio_str = f"{cambio:+.2f}%"
                 
-                # Formato alineado: Emoji Indicador | Nombre | Precio | Variación
                 linea = f"{emoji} {indicador} <code>{nombre:<12}</code> <b>{precio_str:>10}</b>  <code>{cambio_str:>8}</code>"
                 lineas.append(linea)
                 
@@ -213,12 +206,8 @@ class TelegramBot:
             return False
 
     def enviar_alerta_mmd(self, link_stream, imagen_url=None):
-        """
-        Alerta renombrada: AHORAPLAY! en lugar de MAXI MEDIODÍA
-        """
         url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
         
-        # NUEVO: Texto renombrado según solicitud
         caption = (
             "🔔 <b>¡AHORAPLAY!</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -323,14 +312,14 @@ def obtener_link_stream_youtube():
 # ============= MAIN =============
 
 def main():
-    print(f"🚀 Iniciando VISOR v2.1 - {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🚀 Iniciando VISOR v2.2 - {datetime.now().strftime('%H:%M:%S')}")
     
     bot = TelegramBot()
     tz_ar = pytz.timezone('America/Argentina/Buenos_Aires')
     ahora_ar = datetime.now(tz_ar)
     fecha_hoy = ahora_ar.strftime("%Y-%m-%d")
     
-    # 1. ALERTA AHORAPLAY! (antes MMD)
+    # 1. ALERTA AHORAPLAY!
     gestor_maxi = GestorHistorial("ultimo_maxi.txt")
     
     if ahora_ar.weekday() < 5 and ahora_ar.hour == 12:
@@ -406,25 +395,23 @@ def main():
     
     # 4. AMBITO DOLAR - Filtro exacto para "Apertura de jornada" y "Cierre de jornada"
     gestor_especial = GestorHistorial("last_id_especial.txt")
+    enviados_especial = 0  # ← FIX: contador para saber si guardar
     
     for nombre, config in FEEDS_ESPECIALES.items():
         try:
             resp = requests.get(config['url'], timeout=30)
             feed = feedparser.parse(resp.content)
             
-            for entrada in feed.entries[:5]:  # Revisar más porque filtramos
+            for entrada in feed.entries[:5]:
                 link = entrada.get('link', '').strip()
                 if not link or gestor_especial.existe(link):
                     continue
                 
-                # Obtener texto completo
                 titulo = entrada.get('title', '')
                 desc = entrada.get('description', '')
                 texto_completo = f"{titulo} {desc}"
                 texto_limpio = re.sub(r'<[^>]+>', '', texto_completo)
                 
-                # NUEVO: Filtro exacto para "Apertura de jornada" o "Cierre de jornada"
-                # Buscar al inicio del texto (donde suele estar)
                 texto_inicio = texto_limpio[:100].lower()
                 
                 contiene_apertura = "apertura de jornada" in texto_inicio
@@ -434,7 +421,6 @@ def main():
                     print(f"⏭️ Saltando: no es apertura/cierre ({texto_limpio[:30]}...)")
                     continue
                 
-                # Determinar qué tipo es para el mensaje
                 tipo = "APERTURA" if contiene_apertura else "CIERRE"
                 emoji = config.get('emoji', '💵')
                 
@@ -447,14 +433,21 @@ def main():
                 
                 if bot.enviar_texto(mensaje, disable_preview=False):
                     gestor_especial.agregar(link)
+                    enviados_especial += 1  # ← FIX: incrementar contador
                     print(f"✅ Ambito {tipo} enviado")
                     time.sleep(1.5)
                     
         except Exception as e:
             print(f"⚠️ Error en {nombre}: {e}")
+
+    # ← FIX: guardar al disco DESPUÉS del loop, igual que gestor_bsky
+    if enviados_especial > 0:
+        gestor_especial.guardar()
+        print(f"✅ {enviados_especial} posts de Ambito Dolar guardados en historial")
     
     # 5. SPOTIFY
     gestor_spotify = GestorHistorial("last_id_spotify.txt")
+    enviados_spotify = 0  # ← BONUS: mismo patrón para consistencia
     
     for nombre, config in FEEDS_SPOTIFY.items():
         try:
@@ -480,11 +473,17 @@ def main():
                 
                 if bot.enviar_spotify(titulo, link_spotify, imagen, descripcion):
                     gestor_spotify.agregar(ep_id)
+                    enviados_spotify += 1
                     print(f"✅ Spotify: {titulo[:50]}...")
                     time.sleep(2)
                     
         except Exception as e:
             print(f"⚠️ Error Spotify: {e}")
+
+    # ← BONUS: guardar Spotify también correctamente
+    if enviados_spotify > 0:
+        gestor_spotify.guardar()
+        print(f"✅ {enviados_spotify} episodios de Spotify guardados en historial")
     
     print(f"🏁 Finalizado - {datetime.now().strftime('%H:%M:%S')}")
 
