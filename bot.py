@@ -42,8 +42,9 @@ FEEDS_ESPECIALES = {
 FEEDS_SPOTIFY = {
     "BLOOMBERG_LINEA": {
         "nombre": "🎧 Bloomberg Línea Argentina",
-        "url_rss": "https://anchor.fm/s/6d5f6e48/podcast/rss",
-        "url_base": "https://open.spotify.com/show/6d5f6e48",
+        "url_rss": "https://anchor.fm/s/7ce84050/podcast/rss",  # ← URL corregida
+        "url_base": "https://podcasters.spotify.com/pod/show/bloomberg-linea-argentina",
+        "imagen_default": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts116/v4/b6/26/1b/b6261b6d-74f2-b8af-fece-58d41c2e712e/mza_15124749693889878680.jpg/600x600bb.jpg",
         "emoji": "🎙️"
     }
 }
@@ -447,88 +448,49 @@ def main():
     
     # 5. SPOTIFY
     gestor_spotify = GestorHistorial("last_id_spotify.txt")
-    enviados_spotify = 0  # ← BONUS: mismo patrón para consistencia
+    enviados_spotify = 0
     
     for nombre, config in FEEDS_SPOTIFY.items():
         try:
             resp = requests.get(config['url_rss'], timeout=30)
             feed = feedparser.parse(resp.content)
+            print(f"📦 Spotify feed: {len(feed.entries)} episodios encontrados")
             
             for entrada in feed.entries[:1]:
                 ep_id = entrada.get('id', '') or entrada.get('link', '')
                 if not ep_id or gestor_spotify.existe(ep_id):
+                    print(f"⏭️ Spotify: episodio ya enviado anteriormente")
                     continue
                 
                 titulo = entrada.get('title', 'Sin título')
                 link = entrada.get('link', config['url_base'])
                 descripcion = re.sub(r'<[^>]+>', '', entrada.get('description', ''))
                 
+                # Intentar obtener imagen del episodio, si no usar el artwork del show
                 imagen = None
                 if 'image' in entrada:
                     imagen = entrada['image'].get('href') if isinstance(entrada['image'], dict) else entrada['image']
                 elif 'itunes_image' in entrada:
                     imagen = entrada['itunes_image']
+                if not imagen:
+                    imagen = config.get('imagen_default')  # ← artwork del show como fallback
                 
-                link_spotify = link if 'spotify.com' in link else config['url_base']
+                # El link del feed apunta a podcasters.spotify.com que es válido
+                link_spotify = link if ('spotify.com' in link or 'podcasters' in link) else config['url_base']
                 
+                print(f"📤 Enviando Spotify: {titulo[:60]}...")
                 if bot.enviar_spotify(titulo, link_spotify, imagen, descripcion):
                     gestor_spotify.agregar(ep_id)
                     enviados_spotify += 1
-                    print(f"✅ Spotify: {titulo[:50]}...")
+                    print(f"✅ Spotify enviado: {titulo[:50]}...")
                     time.sleep(2)
                     
         except Exception as e:
             print(f"⚠️ Error Spotify: {e}")
 
-    # ← BONUS: guardar Spotify también correctamente
     if enviados_spotify > 0:
         gestor_spotify.guardar()
         print(f"✅ {enviados_spotify} episodios de Spotify guardados en historial")
-    
-    # ============= DIAGNÓSTICO (borrar después de la prueba) =============
-    import json
-
-    print("\n🔍 ===== DIAGNÓSTICO: Buscando RSS via Apple Podcasts API =====")
-    try:
-        # Apple Podcasts guarda el feedUrl original del podcast
-        apple_api = "https://itunes.apple.com/lookup?id=1628871245&entity=podcast"
-        resp_apple = requests.get(apple_api, timeout=30)
-        print(f"📡 Status Apple API: {resp_apple.status_code}")
-
-        data_apple = resp_apple.json()
-        resultados = data_apple.get('results', [])
-        print(f"📦 Resultados: {len(resultados)}")
-
-        if resultados:
-            podcast_info = resultados[0]
-            feed_url = podcast_info.get('feedUrl', 'N/A')
-            print(f"📌 Nombre  : {podcast_info.get('collectionName', 'N/A')}")
-            print(f"🔗 feedUrl : {feed_url}")
-            print(f"🖼️  artwork : {podcast_info.get('artworkUrl600', 'N/A')}")
-
-            # Probar si ese feedUrl funciona
-            if feed_url != 'N/A':
-                print(f"\n🔍 Probando feedUrl encontrado...")
-                resp_feed = requests.get(feed_url, timeout=30, allow_redirects=True)
-                print(f"📡 Status feedUrl: {resp_feed.status_code}")
-                print(f"📡 URL final     : {resp_feed.url}")
-                feed_test = feedparser.parse(resp_feed.content)
-                print(f"📦 Episodios     : {len(feed_test.entries)}")
-                if feed_test.entries:
-                    e = feed_test.entries[0]
-                    print(f"📌 Último título : {e.get('title', 'N/A')}")
-                    print(f"🔗 Link          : {e.get('link', 'N/A')}")
-                    print(f"🆔 ID            : {e.get('id', 'N/A')}")
-                    print(f"✅ FEED FUNCIONANDO — usar esta URL en el código")
-                else:
-                    print("❌ feedUrl encontrado pero feed vacío")
-        else:
-            print("❌ Apple API no devolvió resultados")
-
-    except Exception as e_diag:
-        print(f"❌ Error en diagnóstico: {e_diag}")
-    print("🔍 ===== FIN DIAGNÓSTICO =====\n")
-    # ============= FIN DIAGNÓSTICO =============
 
     print(f"🏁 Finalizado - {datetime.now().strftime('%H:%M:%S')}")
 
