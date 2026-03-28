@@ -485,6 +485,33 @@ def main():
         gestor_spotify.guardar()
         print(f"✅ {enviados_spotify} episodios de Spotify guardados en historial")
     
+    # ============= DIAGNÓSTICO SPOTIFY (borrar después de la prueba) =============
+    print("\n🔍 ========== DIAGNÓSTICO SPOTIFY ==========")
+    try:
+        url_rss_test = "https://anchor.fm/s/6d5f6e48/podcast/rss"
+        resp_test = requests.get(url_rss_test, timeout=30)
+        print(f"📡 Status HTTP del RSS: {resp_test.status_code}")
+        print(f"📡 URL final (tras redirecciones): {resp_test.url}")
+        
+        feed_test = feedparser.parse(resp_test.content)
+        print(f"📦 Episodios encontrados en el feed: {len(feed_test.entries)}")
+        
+        if feed_test.entries:
+            e = feed_test.entries[0]
+            print(f"📌 Título ep. más reciente : {e.get('title', 'N/A')}")
+            print(f"🔗 Link                    : {e.get('link', 'N/A')}")
+            print(f"🆔 ID                      : {e.get('id', 'N/A')}")
+            print(f"🖼️  Imagen (image)          : {e.get('image', 'N/A')}")
+            print(f"🖼️  Imagen (itunes_image)   : {e.get('itunes_image', 'N/A')}")
+            print(f"📝 Descripción (primeros 100 chars): {str(e.get('description', 'N/A'))[:100]}")
+        else:
+            print("❌ El feed está vacío — posible URL incorrecta o feed privado")
+            
+    except Exception as e_diag:
+        print(f"❌ Error en diagnóstico: {e_diag}")
+    print("🔍 ========== FIN DIAGNÓSTICO ==========\n")
+    # ============= FIN DIAGNÓSTICO =============
+
     print(f"🏁 Finalizado - {datetime.now().strftime('%H:%M:%S')}")
 
 if __name__ == "__main__":
