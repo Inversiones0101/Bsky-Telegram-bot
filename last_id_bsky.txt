@@ -12,6 +12,7 @@ https://bsky.app/profile/barchart.com/post/3mi3tqhahok2r
 https://bsky.app/profile/barchart.com/post/3mi3xqpfwlc2r
 https://bsky.app/profile/barchart.com/post/3mi45qo6gxk2r
 https://bsky.app/profile/barchart.com/post/3mi5sogavuk2r
+https://bsky.app/profile/barchart.com/post/3mi77g3ryhk2r
 https://bsky.app/profile/clcoding.bsky.social/post/3mhzyxbyvxc2j
 https://bsky.app/profile/clcoding.bsky.social/post/3mi24jjfwoc2j
 https://bsky.app/profile/clcoding.bsky.social/post/3mi2lhs3f3s2k
@@ -60,3 +61,4 @@ https://bsky.app/profile/trendspider.com/post/3mi62fzl7pf27
 https://bsky.app/profile/trendspider.com/post/3mi65rdr3fy2c
 https://bsky.app/profile/trendspider.com/post/3mi6eiviskw2m
 https://bsky.app/profile/trendspider.com/post/3mi73xtizbw2w
+https://bsky.app/profile/trendspider.com/post/3mi77co3gb22m
