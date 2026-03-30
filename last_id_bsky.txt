@@ -57,6 +57,7 @@ https://bsky.app/profile/quanthustle.bsky.social/post/3mi2vtiyfuo2s
 https://bsky.app/profile/quanthustle.bsky.social/post/3mi5gcepwkg22
 https://bsky.app/profile/quanthustle.bsky.social/post/3mi7wr6f52w2b
 https://bsky.app/profile/quanthustle.bsky.social/post/3miae6h2wma2q
+https://bsky.app/profile/quanthustle.bsky.social/post/3micha572xv2r
 https://bsky.app/profile/trendspider.com/post/3mi26lhi6nw2c
 https://bsky.app/profile/trendspider.com/post/3mi2bpjggqs2c
 https://bsky.app/profile/trendspider.com/post/3mi2igbnvr22c
@@ -109,3 +110,4 @@ https://bsky.app/profile/trendspider.com/post/3mibwxms3tj2c
 https://bsky.app/profile/trendspider.com/post/3mic3iop2hw2o
 https://bsky.app/profile/trendspider.com/post/3micazhmx7x2w
 https://bsky.app/profile/trendspider.com/post/3micerb2cij2z
+https://bsky.app/profile/trendspider.com/post/3michoaasm22w
