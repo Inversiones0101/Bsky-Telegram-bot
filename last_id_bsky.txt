@@ -1,5 +1,3 @@
-https://bsky.app/profile/barchart.com/post/3miazwisppk2h
-https://bsky.app/profile/barchart.com/post/3mibik6b7qc2p
 https://bsky.app/profile/barchart.com/post/3mibwkow7u22r
 https://bsky.app/profile/barchart.com/post/3miccexhct22w
 https://bsky.app/profile/barchart.com/post/3micqtt57uc27
@@ -65,6 +63,7 @@ https://bsky.app/profile/quanthustle.bsky.social/post/3micha572xv2r
 https://bsky.app/profile/quanthustle.bsky.social/post/3micunkdtmt2s
 https://bsky.app/profile/quanthustle.bsky.social/post/3miexp5aks42y
 https://bsky.app/profile/quanthustle.bsky.social/post/3miff4jqfkp2b
+https://bsky.app/profile/quanthustle.bsky.social/post/3mihi65sxqd2k
 https://bsky.app/profile/trendspider.com/post/3mi26lhi6nw2c
 https://bsky.app/profile/trendspider.com/post/3mi2bpjggqs2c
 https://bsky.app/profile/trendspider.com/post/3mi2igbnvr22c
@@ -148,3 +147,4 @@ https://bsky.app/profile/trendspider.com/post/3mih4gpg3me2p
 https://bsky.app/profile/trendspider.com/post/3mih7rtokig2w
 https://bsky.app/profile/trendspider.com/post/3mihd6lvtkc2o
 https://bsky.app/profile/trendspider.com/post/3mihgi7lj7q2w
+https://bsky.app/profile/trendspider.com/post/3mihjtlyw732c
