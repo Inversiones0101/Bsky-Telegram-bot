@@ -1,4 +1,3 @@
-https://bsky.app/profile/barchart.com/post/3mi2lcxkvhk2c
 https://bsky.app/profile/barchart.com/post/3mi2r7wu5c22c
 https://bsky.app/profile/barchart.com/post/3mi2xnilsr22b
 https://bsky.app/profile/barchart.com/post/3mi32h7fmss2e
@@ -24,6 +23,7 @@ https://bsky.app/profile/barchart.com/post/3midsywihdc2b
 https://bsky.app/profile/barchart.com/post/3midwfvcyys2b
 https://bsky.app/profile/barchart.com/post/3mielmzsnec2h
 https://bsky.app/profile/barchart.com/post/3mif7eigekk2p
+https://bsky.app/profile/barchart.com/post/3migavszdos2p
 https://bsky.app/profile/clcoding.bsky.social/post/3mhzyxbyvxc2j
 https://bsky.app/profile/clcoding.bsky.social/post/3mi24jjfwoc2j
 https://bsky.app/profile/clcoding.bsky.social/post/3mi2lhs3f3s2k
