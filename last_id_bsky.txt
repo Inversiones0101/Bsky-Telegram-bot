@@ -1,5 +1,3 @@
-https://bsky.app/profile/barchart.com/post/3mi2drsrpa22z
-https://bsky.app/profile/barchart.com/post/3mi2j4pjifc2c
 https://bsky.app/profile/barchart.com/post/3mi2lcxkvhk2c
 https://bsky.app/profile/barchart.com/post/3mi2r7wu5c22c
 https://bsky.app/profile/barchart.com/post/3mi2xnilsr22b
@@ -148,3 +146,5 @@ https://bsky.app/profile/trendspider.com/post/3mif7af3q342o
 https://bsky.app/profile/trendspider.com/post/3mifcllcsia2w
 https://bsky.app/profile/trendspider.com/post/3miffwu5zgd26
 https://bsky.app/profile/trendspider.com/post/3mifjc574cw2p
+https://bsky.app/profile/trendspider.com/post/3mifmng3f4y2j
+https://bsky.app/profile/trendspider.com/post/3mifpypbwrz2n
