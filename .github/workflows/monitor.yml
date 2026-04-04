@@ -40,6 +40,6 @@ jobs:
           
           touch last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
           
-          git add last_id_bsky.txt last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
+          git add last_id_bsky.json last_id_especial.txt last_id_spotify.txt ultimo_maxi.txt
           git commit -m "Actualizar historial [skip ci]" || echo "Sin cambios"
           git push origin main
